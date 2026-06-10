@@ -788,6 +788,7 @@ html, body {
     <div class="form-row">
       <div class="form-field">
         <label>Ваше имя</label>
+        <input type="hidden" name="_replyto" value="bayatar@mail.ru">
         <input type="text" name="name" placeholder="Алибек">
       </div>
       <div class="form-field">
@@ -920,32 +921,42 @@ if (form) {
 </div>
 
 <script>
-// Formspree AJAX
 const cform = document.querySelector('form.cta-form');
 if (cform) {
   cform.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = cform.querySelector('.submit-btn');
+    const originalText = btn.textContent;
     btn.textContent = 'Отправляем...';
     btn.disabled = true;
+
+    const data = new FormData(cform);
+
     try {
-      const res = await fetch(cform.action, {
+      const res = await fetch('https://formspree.io/f/xykapbkv', {
         method: 'POST',
-        body: new FormData(cform),
+        body: data,
         headers: { 'Accept': 'application/json' }
       });
-      if (res.ok) {
+
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
         btn.textContent = '✓ Заявка отправлена!';
         btn.style.background = '#2D4A30';
         btn.style.color = '#F5F0E8';
         cform.reset();
       } else {
-        btn.textContent = 'Ошибка — попробуйте снова';
+        console.error('Formspree error:', json);
+        btn.textContent = originalText;
         btn.disabled = false;
+        alert('Ошибка отправки. Позвоните нам: +7 775 000 09 04');
       }
-    } catch {
-      btn.textContent = 'Ошибка — попробуйте снова';
+    } catch(err) {
+      console.error('Network error:', err);
+      btn.textContent = originalText;
       btn.disabled = false;
+      alert('Ошибка сети. Позвоните нам: +7 775 000 09 04');
     }
   });
 }

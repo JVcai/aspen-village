@@ -6,6 +6,375 @@
 <title>Aspen Village — Коттеджный посёлок под Астаной</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+
+
+
+/* ИНТЕРАКТИВНЫЙ ГЕНПЛАН */
+.genplan-section {
+  padding: 6rem 1.5rem;
+  background-color: var(--cream);
+  text-align: center;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem; font-weight: 400; color: var(--forest);
+  margin-bottom: 1rem;
+}
+.section-subtitle {
+  font-size: 1.1rem; color: var(--stone);
+  max-width: 600px; margin: 0 auto 2.5rem auto;
+  line-height: 1.6;
+}
+
+/* Скролл-контейнер для мобильных девайсов (ЖЕСТКАЯ СВЯЗКА ДЛЯ АДАПТИВА) */
+.genplan-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Инерционный скролл на iOS */
+  padding: 1rem 0 2rem 0;
+  margin: 0 auto;
+}
+.genplan-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+.genplan-scroll-container::-webkit-scrollbar-track {
+  background: rgba(28, 28, 26, 0.05);
+  border-radius: 3px;
+}
+.genplan-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--stone);
+  border-radius: 3px;
+}
+
+/* Оболочка карты */
+.genplan-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(28, 28, 26, 0.15);
+  border: 4px solid #fff;
+  background: #fff;
+}
+
+/* Мобильный подсказчик скролла */
+.scroll-hint {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--stone);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: pulseText 2s infinite ease-in-out;
+}
+.scroll-hint svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+@keyframes pulseText {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 1024px) {
+  /* Фиксируем минимальную ширину карты на смартфонах,
+     чтобы маркеры не уезжали с крыш домов и не превращались в кашу */
+  .genplan-wrapper {
+    width: 1000px;
+    max-width: none;
+  }
+  .scroll-hint {
+    display: flex;
+  }
+}
+
+.genplan-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+}
+
+/* Стили точек-маркеров */
+.pin {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin svg {
+  width: 18px;
+  height: 18px;
+  fill: #ffffff;
+  transition: transform 0.25s;
+}
+.pin::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 50%;
+  animation: pulse 2.2s infinite ease-out;
+  z-index: -1;
+}
+.pin:hover {
+  transform: translate(-50%, -50%) scale(1.25);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.pin:hover svg {
+  transform: scale(1.1);
+}
+
+/* Цвета маркеров и пульсации в зависимости от статуса */
+.pin[data-status="ready"] {
+  background: var(--forest);
+  border: 2px solid var(--warm-white);
+}
+.pin[data-status="ready"]::after {
+  background: var(--forest);
+}
+
+.pin[data-status="building"] {
+  background: var(--gold);
+  border: 2px solid var(--warm-white);
+}
+.pin[data-status="building"]::after {
+  background: var(--gold);
+}
+
+.pin[data-status="sold"] {
+  background: var(--stone);
+  border: 2px solid var(--warm-white);
+}
+.pin[data-status="sold"]::after {
+  display: none; /* Проданным не нужна пульсация */
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Легенда карты */
+.genplan-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--charcoal);
+  font-weight: 500;
+}
+.legend-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.legend-badge svg {
+  width: 14px;
+  height: 14px;
+  fill: #fff;
+}
+.legend-badge.ready { background: var(--forest); }
+.legend-badge.building { background: var(--gold); }
+.legend-badge.sold { background: var(--stone); }
+
+/* ДВУХГИС КАРТА */
+.location-section {
+  padding: 6rem 2rem;
+  background-color: var(--warm-white);
+}
+.map-title-container {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.map-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 500px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  border: 1px solid rgba(140, 130, 120, 0.15);
+}
+.tgis-btn-wrapper {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+/* ВСПЛЫВАЮЩЕЕ ОКНО (BOTTOM SHEET) */
+.sheet-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(28, 28, 26, 0.5);
+  backdrop-filter: blur(6px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 999;
+}
+.sheet-overlay.active { opacity: 1; pointer-events: auto; }
+
+.bottom-sheet {
+  position: fixed; bottom: 0; left: 50%; width: 100%;
+  background: var(--warm-white);
+  border-radius: 24px 24px 0 0;
+  transform: translate(-50%, 100%);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1000;
+  box-shadow: 0 -15px 40px rgba(28, 28, 26, 0.15);
+  max-width: 550px;
+  overflow: hidden;
+}
+.bottom-sheet.active { transform: translate(-50%, 0); }
+
+/* Контент шторки */
+.sheet-img-container {
+  width: 100%;
+  height: 240px;
+  position: relative;
+  background: var(--cream);
+}
+.sheet-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sheet-badge {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+.sheet-badge.status-ready { background: var(--forest); }
+.sheet-badge.status-building { background: var(--gold); }
+.sheet-badge.status-sold { background: var(--stone); }
+
+.sheet-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(250, 248, 244, 0.9);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--charcoal);
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+.sheet-close:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+.sheet-content {
+  padding: 2rem 2rem 2.5rem 2rem;
+}
+.sheet-title-row {
+  margin-bottom: 1.5rem;
+}
+.sheet-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.6rem;
+  color: var(--forest);
+  font-weight: 500;
+  line-height: 1.1;
+}
+.sheet-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 2rem;
+}
+.spec-item {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(140, 130, 120, 0.15);
+  padding-bottom: 0.6rem;
+}
+.spec-label {
+  color: var(--stone);
+  font-size: 1rem;
+}
+.spec-value {
+  font-weight: 500;
+  color: var(--charcoal);
+  font-size: 1.05rem;
+}
+.sheet-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  background: var(--cream);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+}
+.price-label {
+  font-size: 0.9rem;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.price-value {
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--forest);
+}
+
+.sheet-actions {
+  margin-top: 2rem;
+}
+.sheet-actions .btn {
+  width: 100%;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .bottom-sheet {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+
+
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --cream: #F5F0E8;
@@ -184,6 +553,14 @@ nav {
   content: ''; width: 4px; height: 4px; border-radius: 50%;
   background: var(--forest); flex-shrink: 0; margin-top: 9px;
 }
+
+
+
+
+
+
+
+
 
 /* GALLERY - construction progress */
 .gallery { padding: 80px 60px; background: var(--cream); }
@@ -610,6 +987,149 @@ html, body {
   </div>
 </section>
 
+
+
+<!-- ИНТЕРАКТИВНЫЙ ГЕНПЛАН -->
+<section class="genplan-section" id="genplan">
+  <div class="container">
+    <h2 class="section-title">Интерактивный генплан</h2>
+    <p class="section-subtitle">Ознакомьтесь с планировкой поселка. Нажмите на любой интересующий вас участок, чтобы увидеть его актуальный статус, площадь и цену.</p>
+
+<!-- Подсказка для мобильных скролл-жестов -->
+    <div class="scroll-hint">
+      <svg viewBox="0 0 24 24"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+      Проведите пальцем для просмотра всей карты
+    </div>
+
+
+    <!-- Область прокрутки -->
+    <div class="genplan-scroll-container">
+      <div class="genplan-wrapper">
+        <!-- Изображение генплана поселка -->
+        <img src="Aspen Village (2).png" alt="Генплан Aspen Village" class="genplan-img" id="genplan-img">
+        
+        <!-- МАРКЕРЫ НА ДОМАХ -->
+        
+        <!-- Готовые к сдаче (Иконка Домика - Green/Forest) -->
+        <!-- Дом 2 -->
+        <div class="pin" style="top: 50.8%; left: 26.3%;" data-id="2" data-status="ready" data-area="160" data-price="65 000 000">
+          <!-- SVG Иконка Дома -->
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+        <!-- Дом 1 -->
+        <div class="pin" style="top: 50.5%; left: 12.5%;" data-id="1" data-status="ready" data-area="180" data-price="65 000 000">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+        
+        <!-- Строящиеся (Иконка Часов - Gold) -->
+        <!-- Дом 3 -->
+        <div class="pin" style="top: 51%; left: 37.8%;" data-id="3" data-status="building" data-area="170" data-price="По запросу">
+          <!-- SVG Иконка Часов -->
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 4 -->
+        <div class="pin" style="top: 52%; left: 49.1%;" data-id="4" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 5 -->
+        <div class="pin" style="top: 52%; left: 59%;" data-id="5" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 6 -->
+        <div class="pin" style="top: 52%; left: 68.5%;" data-id="6" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 7 -->
+        <div class="pin" style="top: 50.8%; left: 81.0%;" data-id="7" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 9 -->
+        <div class="pin" style="top: 50.8%; left: 94.0%;" data-id="9" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 10 -->
+        <div class="pin" style="top: 17%; left: 13%;" data-id="10" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 11 -->
+        <div class="pin" style="top: 17%; left: 25%;" data-id="11" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 12 -->
+        <div class="pin" style="top: 17%; left: 37%;" data-id="11" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 13 -->
+        <div class="pin" style="top: 17%; left: 50%;" data-id="13" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 14 -->
+        <div class="pin" style="top: 17%; left: 62.5%;" data-id="14" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <!-- Дом 15 -->
+        <div class="pin" style="top: 17.0%; left: 75.0%;" data-id="15" data-status="building" data-area="170" data-price="По запросу">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        
+        <!-- Проданные/Забронированные (Иконка Семьи/Людей - Stone/Grey) -->
+        <!-- Дом 8 -->
+        <div class="pin" style="top: 67.4%; left: 84.6%;" data-id="8" data-status="sold" data-area="160" data-price="Продан">
+          <!-- SVG Иконка Семьи -->
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 1.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </div>
+
+      </div>
+    </div>
+    <!-- Легенда обозначений -->
+    <div class="genplan-legend">
+      <div class="legend-item">
+        <div class="legend-badge ready">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+        <span>Готовы к сдаче</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-badge building">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <span>Идет строительство</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-badge sold">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 1.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </div>
+        <span>Уже продан / Семья</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- КАРТА И РАСПОЛОЖЕНИЕ -->
+<section class="location-section" id="location">
+  <div class="container">
+    <div class="map-title-container">
+      <h2 class="section-title">Расположение поселка</h2>
+      <p class="section-subtitle">Мы находимся в экологически чистом пригородном районе. Оцените маршрут и инфраструктуру рядом.</p>
+    </div>
+
+    <!-- Контейнер для встраиваемой интерактивной карты -->
+    <div class="map-container">
+      <!-- Карта Яндекс/Google, ориентированная на ваши координаты 51.220611, 71.693034 -->
+      <iframe src="https://yandex.ru/map-widget/v1/?ll=71.693034%2C51.220611&z=15&pt=71.693034%2C51.220611%2Cpm2grm" width="100%" height="100%" frameborder="0" allowfullscreen="true" style="position:relative; border: none;"></iframe>
+    </div>
+
+    <div class="tgis-btn-wrapper">
+      <a href="https://2gis.kz/astana/geo/70030076166084231/71.693034,51.220611" target="_blank" rel="noopener noreferrer" class="btn secondary" style="border-color: var(--gold); color: var(--gold); font-weight: 500;">
+        Открыть в 2GIS
+      </a>
+    </div>
+  </div>
+</section>
+
+
+
+
 <!-- GALLERY -->
 <section class="gallery" id="gallery">
   <div class="gallery-header reveal">
@@ -814,6 +1334,50 @@ html, body {
   </form>
 </section>
 
+
+
+<!-- ВСПЛЫВАЮЩАЯ ШТОРКА (BOTTOM SHEET) -->
+<div class="sheet-overlay" id="sheet-overlay"></div>
+<div class="bottom-sheet" id="bottom-sheet">
+  <!-- Блок с изображением дома -->
+  <div class="sheet-img-container">
+    <img src="5276169918309146244.jpg" id="bs-image" alt="Фасад дома" class="sheet-img">
+    <span class="sheet-badge" id="bs-status-badge">Готов к продаже</span>
+    <button class="sheet-close" id="bs-close">&times;</button>
+  </div>
+  
+  <div class="sheet-content">
+    <div class="sheet-title-row">
+      <h3 class="sheet-title" id="bs-title">Дом №1</h3>
+    </div>
+    
+    <div class="sheet-specs">
+      <div class="spec-item">
+        <span class="spec-label">Техническое состояние</span>
+        <span class="spec-value" id="bs-condition-text">Сдача в эксплуатацию</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Общая площадь дома</span>
+        <span class="spec-value" id="bs-area">160 м²</span>
+      </div>
+      <div class="spec-item">
+        <span class="spec-label">Материалы стен</span>
+        <span class="spec-value">Эко-панели / Кирпич</span>
+      </div>
+    </div>
+    
+    <div class="sheet-price-row">
+      <span class="price-label">Стоимость объекта</span>
+      <span class="price-value" id="bs-price">65 000 000 ₸</span>
+    </div>
+    
+    <div class="sheet-actions">
+      <a href="#contact" class="btn primary" id="bs-submit-action">Забронировать дом</a>
+    </div>
+  </div>
+</div>
+
+
 <!-- FOOTER -->
 <footer>
   <div class="footer-logo">
@@ -960,6 +1524,172 @@ if (cform) {
     }
   });
 }
+
+
+
 </script>
+
+
+
+<script>
+// Интерактивная логика генплана
+document.addEventListener('DOMContentLoaded', () => {
+  const pins = document.querySelectorAll('.pin');
+  const overlay = document.getElementById('sheet-overlay');
+  const sheet = document.getElementById('bottom-sheet');
+  const closeBtn = document.getElementById('bs-close');
+  const submitActionBtn = document.getElementById('bs-submit-action');
+
+  // Элементы формы
+  const interestedInput = document.getElementById('form-interested');
+
+  // Элементы внутри шторки
+  const bsTitle = document.getElementById('bs-title');
+  const bsStatusBadge = document.getElementById('bs-status-badge');
+  const bsImage = document.getElementById('bs-image');
+  const bsConditionText = document.getElementById('bs-condition-text');
+  const bsArea = document.getElementById('bs-area');
+  const bsPrice = document.getElementById('bs-price');
+
+  // Конфигурация статусов домов и путей к картинкам
+  const statusConfig = {
+    'ready': {
+      badgeText: 'Готов к продаже',
+      badgeClass: 'status-ready',
+      conditionText: 'Введен в эксплуатацию (Готов)',
+      imageSrc: '5276169918309146244.jpg',
+      btnText: 'Забронировать дом'
+    },
+    'building': {
+      badgeText: 'Строится',
+      badgeClass: 'status-building',
+      conditionText: 'Идет активное строительство',
+      imageSrc: '5276169918309146248.jpg',
+      btnText: 'Узнать ход работы'
+    },
+    'sold': {
+      badgeText: 'Продан / Живет семья',
+      badgeClass: 'status-sold',
+      conditionText: 'Объект продан владельцам',
+      imageSrc: '5276169918309146246.jpg',
+      btnText: 'Посмотреть похожие варианты'
+    }
+  };
+
+  function openSheet(data) {
+    const config = statusConfig[data.status];
+    
+    // Меняем заголовок
+    bsTitle.textContent = `Дом №${data.id}`;
+    
+    // Меняем изображение в зависимости от статуса дома
+    bsImage.src = config.imageSrc;
+    bsImage.alt = `Фасад Дома №${data.id}`;
+    
+    // Настраиваем бейдж статуса
+    bsStatusBadge.textContent = config.badgeText;
+    bsStatusBadge.className = `sheet-badge ${config.badgeClass}`;
+    
+    // Описание состояния и площадь
+    bsConditionText.textContent = config.conditionText;
+    bsArea.textContent = `${data.area} м²`;
+    
+    // Вывод форматированной цены
+    let finalPrice = data.price;
+    if (!isNaN(finalPrice.replace(/\s/g, ''))) {
+      finalPrice = parseInt(finalPrice.replace(/\s/g, '')).toLocaleString('ru-RU') + ' ₸';
+    }
+    bsPrice.textContent = finalPrice;
+    
+    // Корректируем кнопку в шторке
+    submitActionBtn.textContent = config.btnText;
+
+    // Автоматическое заполнение поля "Интересующий объект" в форме
+    if (interestedInput) {
+      interestedInput.value = `Дом №${data.id} (${config.badgeText})`;
+    }
+
+    // Показываем шторку
+    overlay.classList.add('active');
+    sheet.classList.add('active');
+  }
+
+  function closeSheet() {
+    overlay.classList.remove('active');
+    sheet.classList.remove('active');
+  }
+
+  // Клик на маркеры
+  pins.forEach(pin => {
+    pin.addEventListener('click', () => {
+      openSheet(pin.dataset);
+    });
+  });
+
+  // Закрытие шторки
+  closeBtn.addEventListener('click', closeSheet);
+  overlay.addEventListener('click', closeSheet);
+  submitActionBtn.addEventListener('click', () => {
+    closeSheet();
+  });
+
+  // Обработка формы
+  const cform = document.querySelector('form.cta-form');
+  if (cform) {
+    cform.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = cform.querySelector('.submit-btn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Отправляем...';
+      btn.disabled = true;
+
+      const data = new FormData(cform);
+
+      try {
+        const res = await fetch('https://formspree.io/f/xykapbkv', {
+          method: 'POST',
+          body: data,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        if (res.ok) {
+          btn.textContent = 'Отправлено!';
+          cform.reset();
+        } else {
+          btn.textContent = 'Ошибка!';
+        }
+      } catch (err) {
+        btn.textContent = 'Ошибка!';
+      } finally {
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 3000);
+      }
+    });
+  }
+
+  /* =========================================================================
+   * ПРО-СОВЕТ ДЛЯ СКАНИРОВАНИЯ КООРДИНАТ:
+   * Если тебе нужно расставить оставшиеся дома с 6 по 12, раскомментируй блок ниже.
+   * Открой страницу, кликни по нужному дому на картинке генплана.
+   * Консоль разработчика (F12) выдаст готовый CSS-код, например: top: 45.2%; left: 68.1%;
+   * Скопируй его и пропиши в тег style соответствующей точки в HTML.
+   * ========================================================================= */
+  
+  /*
+  document.getElementById('genplan-img').addEventListener('click', function(e) {
+    const rect = e.target.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    console.log(`style="top: ${y.toFixed(1)}%; left: ${x.toFixed(1)}%;"`);
+  });
+  */
+});
+</script>
+
+
+
 </body>
 </html>
